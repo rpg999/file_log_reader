@@ -1,9 +1,9 @@
-package reader
+package log_reader
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"encoding/json"
 )
 
 type LogFile struct {
@@ -17,7 +17,11 @@ func (l *LogFile) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if l.Format != "first_format" && l.Format != "second_format" {
+	if len(l.FullPath) == 0{
+		return fmt.Errorf("path to file is empty")
+	}
+
+	if l.Format != FirstFormat && l.Format != SecondFormat {
 		return fmt.Errorf("invalid log format: %s", l.Format)
 	}
 

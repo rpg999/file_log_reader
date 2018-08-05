@@ -1,39 +1,69 @@
-package build
+package main
 
 import (
+	"context"
 	"flag"
+	"github.com/mongodb/mongo-go-driver/mongo"
+	"github.com/rpg999/file_log_reader/log_reader"
 	"log"
-	"strings"
-	"os"
-	"github.com/rpg999/file_log_reader"
 )
 
-var fileList = flag.String("file_list", "/tmp/test_files/first_format.log|/tmp/test_files/second_format.log", "List of files to track, separated by `|`")
-var logFormat = flag.String("log_format", "first_format", "Type of logs in the file")
+var fileList = flag.String("file_list", "bin/file_list.json", "List of files to track in json format")
 
-func main()  {
+func main() {
 	flag.Parse()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	if len(*fileList) == 0 {
-		log.Fatal("no file name is specified")
+		log.Fatal("no file list is specified")
 	}
 
-	var paths []string
-	for _, path := range strings.Split(*fileList, "|") {
-		if _, err := os.Stat(path); err == nil {
-			paths = append(paths, path)
-		}
+	files, err := log_reader.ParseFileList(*fileList)
+	if err != nil {
+		log.Fatalf("error while parsing file list: %s", err)
 	}
 
-	if len(paths) == 0 {
+	if len(files) == 0 {
 		log.Fatal("no valid files for tracking")
 	}
 
-	if logStream, err := file_log_reader.TrackFiles(paths); err != nil {
-		for l := range logStream {
-			log.Println(l)
+	// For simplicity we will use the default db connection
+	login, password := "", ""
+	client, err := mongo.NewClient("mongodb://" + login + ":" + password + "@localhost:27017")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = client.Connect(context.TODO())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	collection := client.Database("bitsane").Collection("log")
+
+	// Done channel can make all goroutines exist safely
+	done := make(chan struct{})
+	logStream, err := log_reader.TrackFiles(done, files)
+	if err != nil {
+		log.Println(err)
+		close(done)
+
+		return
+	}
+
+	for l := range logStream {
+		// Here we can do something with errors, for example, if there are more than 10 errors then we close done channel
+		if l.Err != nil {
+			log.Println(l.Err)
+			continue
 		}
+
+		res, err := collection.InsertOne(context.Background(), l.Log)
+		if err != nil {
+			log.Println(err)
+		}
+		id := res.InsertedID
+		log.Println("New entry is added with id: ", id)
 	}
 
 	log.Println("End of program")

@@ -1,1 +1,5 @@
 .idea
+vendor
+pkg
+bin
+.DS_Store

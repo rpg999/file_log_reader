@@ -5,10 +5,6 @@
       "format": "first_format"
     },
     {
-      "full_path" : "/tmp/test_files/first_format_1.log",
-      "format": "first_format"
-    },
-    {
       "full_path" : "/tmp/test_files/second_format.log",
       "format": "second_format"
     }
