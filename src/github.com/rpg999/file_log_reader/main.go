@@ -28,8 +28,7 @@ func main() {
 	}
 
 	// For simplicity we will use the default db connection
-	login, password := "", ""
-	client, err := mongo.NewClient("mongodb://" + login + ":" + password + "@localhost:27017")
+	client, err := mongo.NewClient("mongodb://localhost:27017")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -39,7 +38,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	collection := client.Database("bitsane").Collection("log")
+	collection := client.Database("bitsane_test").Collection("log")
 
 	// Done channel can make all goroutines exist safely
 	done := make(chan struct{})
